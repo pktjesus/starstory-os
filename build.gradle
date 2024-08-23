@@ -1,0 +1,121 @@
+buildscript {
+    ext {
+        publishedPluginVersion = rootProject.properties['pluginVersion']
+        pluginVersion = rootProject.properties['pluginVersion']
+        opensearchVersion = project.properties['opensearchVersion']
+        pluginName = rootProject.properties['pluginName']
+        luceneVersion = project.properties['luceneVersion']
+        javaVersion = 21
+    }
+}
+
+plugins {
+    id 'java'
+}
+apply plugin: 'java'
+group 'org.opensearch.plugin'
+compileJava.options.encoding = 'UTF-8'
+
+repositories {
+    mavenCentral()
+}
+
+group = 'org.opensearch.plugin'
+version = pluginVersion
+def pluginFullName = pluginName + '-' + version
+
+dependencies {
+////    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.2'
+//    implementation group: 'com.google.guava', name: 'guava', version: '31.1-jre'
+//    implementation group: 'commons-codec', name: 'commons-codec', version: '1.15'
+//    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+////    implementation group: 'org.elasticsearch', name: 'elasticsearch', version: "${elasticsearchVersion}"
+//    implementation group: 'org.opensearch', name: 'opensearch', version: "${opensearchVersion}"
+//    implementation group: 'org.apache.lucene', name: 'lucene-core', version: "${luceneVersion}"
+////    testCompileOnly group: 'junit', name: 'junit', version: '4.12'
+}
+
+test {
+    systemProperties 'property': 'value'
+}
+
+configurations {
+    includeInJar
+}
+
+task cleanOldData {
+    doLast {
+        delete 'build/tmp/' + pluginFullName
+    }
+}
+
+
+task configureOpensearchVersion() {
+    doLast {
+        if (project.hasProperty('opensearchVersion')) {
+            opensearchVersion = project.properties['opensearchVersion']
+        }
+    }
+}
+
+
+task generateVersionsFile() {
+    outputs.upToDateWhen { false }
+    doFirst {
+        def resourcesDir = 'build/tmp/'
+
+        def contents2 = """name=${pluginName}
+version=${pluginVersion}
+opensearch.version=${opensearchVersion}
+java.version=${javaVersion}
+description=custom plugin.
+classname=org.opensearch.plugin.analysis.OpensearchPlugin"""
+
+        new File(resourcesDir, "plugin-descriptor.properties").text = contents2
+    }
+}
+
+task resolvePluginDescriptorTemplate(type: Copy, dependsOn: configureOpensearchVersion) {
+    outputs.upToDateWhen { false }
+    from 'src/main/resources/'
+    into 'build/tmp/' + pluginFullName
+    expand([
+            'descriptor': [
+                    'name'                : pluginName,
+                    'pluginVersion'       : project.properties['pluginVersion'],
+                    'opensearchVersion': project.properties['opensearchVersion']
+            ]
+    ])
+}
+
+
+task toJar(type: Jar, dependsOn: generateVersionsFile) {
+    from sourceSets.main.getOutput()
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    configurations.runtimeClasspath {
+        exclude group: "org.apache.lucene"
+        exclude group: "org.opensearch"
+    }
+
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    with jar
+}
+
+
+task buildPluginZip(type: Zip, dependsOn: [cleanOldData, toJar, resolvePluginDescriptorTemplate]) {
+    outputs.upToDateWhen { false }
+    archivesBaseName = pluginName
+
+
+    into('.')
+            {
+                from 'build/tmp/plugin-descriptor.properties'
+                from 'build/libs/' + pluginFullName + '.jar'
+                from 'build/tmp/' + pluginFullName
+            }
+}
