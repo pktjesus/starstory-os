@@ -8,6 +8,7 @@ import org.opensearch.index.analysis.TokenFilterFactory;
 import org.opensearch.index.analysis.chosung.ChosungTokenFilterFactory;
 import org.opensearch.index.analysis.eng2kor.Eng2KorConvertFilterFactory;
 import org.opensearch.index.analysis.jamo.JamoCharFilterFactory;
+import org.opensearch.index.analysis.lowercase.LowercaseCharFilterFactory;
 import org.opensearch.index.analysis.jamo.JamoTokenFilterFactory;
 import org.opensearch.index.analysis.kor2eng.Kor2EngConvertFilterFactory;
 import org.opensearch.index.analysis.soundex.SoundexConvertFilterFactory;
@@ -52,6 +53,7 @@ public class OpensearchPlugin extends Plugin implements AnalysisPlugin {
         Map<String, AnalysisModule.AnalysisProvider<CharFilterFactory>> extra = new HashMap<>();
 
         extra.put("jamo_char_filter", JamoCharFilterFactory::new);
+        extra.put("lowercase_char_filter", LowercaseCharFilterFactory::new);
         return extra;
     }
 }
