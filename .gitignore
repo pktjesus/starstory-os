@@ -30,3 +30,8 @@ bin/
 
 .idea/
 .gradle/
+build/
+
+.class
+.jar
+.war
